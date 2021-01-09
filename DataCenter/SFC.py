@@ -1,8 +1,8 @@
 # -*-coding:utf-8-*-
 import os
 from posix import listdir
-from .Container import Container
-from .OpenvSwitch import OpenvSwitch
+from Container import Container
+from OpenvSwitch import OpenvSwitch
 
 
 class SFC:

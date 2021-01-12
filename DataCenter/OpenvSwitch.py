@@ -1,5 +1,6 @@
 # -*-coding:utf-8-*-
 import os
+import config
 
 
 class OpenvSwitch:
@@ -9,17 +10,17 @@ class OpenvSwitch:
         self.ports = set()
         self.flows = set()
 
-    def __del__(self) -> None:
-        for item in self.flows:
-            self.delFlow(item)
-        self.flows.clear()
-        for item in self.ports:
-            self.delPort(item)
-        self.ports.clear()
+    # def __del__(self) -> None:
+    #     for item in self.flows:
+    #         self.delFlow(item,config.PASSWORD)
+    #     self.flows.clear()
+    #     for item in self.ports:
+    #         self.delPort(item,config.PASSWORD)
+    #     self.ports.clear()
 
-    def addPort(self, port: str, password: str, container="") -> None:
+    def addPort(self, port: str, password: str, containerName="") -> None:
         os.system(
-            "echo {} | sudo ovs-vsctl add-port ovs {} {}".format(password, port, container))
+            "echo {} | sudo ovs-docker add-port ovs {} {}".format(password, port, containerName))
         self.ports.add(port)
 
     def delPort(self, port: str, password) -> None:
@@ -27,9 +28,10 @@ class OpenvSwitch:
         self.ports.remove(port)
 
     def addFlow(self, flow, password) -> None:
-        os.system("echo {} | sudo ovs-vsctl add-flow ovs {}".format(password, flow))
+        print(flow)
+        os.system("echo {} | sudo ovs-ofctl add-flow ovs {}".format(password, flow))
         self.flows.add(flow)
 
     def delFlow(self, flow, password) -> None:
-        os.system("echo {} | sudo ovs-vsctl del-flow ovs {}".format(password, flow))
+        os.system("echo {} | sudo ovs-ofctl del-flow ovs {}".format(password, flow))
         self.flows.remove(flow)

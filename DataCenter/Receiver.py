@@ -1,12 +1,13 @@
 # -*-coding:utf-8-*-
 import socket
 import threading
+import config
 
 
 class Receiver:
-    def __init__(self, ip: str, port: int):
+    def __init__(self):
         super().__init__()
-        self.addr = (ip, port)
+        self.addr = (config.LOCAL_IP,config.LOCAL_PORT)
         self.bufSize = 2048
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind(self.addr)
@@ -28,10 +29,10 @@ class Receiver:
                         masterSocket.close()
                         # 接收器将生成的容器信息列表保存在传入的实参cons中
                         lock.acquire()
-                        print("Reciver已获取锁")
+                        # print("Reciver已获取锁")
                         self.msgs.add(msg.decode())
                         lock.release()
-                        print("Reciver已释放锁")
+                        # print("Reciver已释放锁")
                         flag = False
                         break
                 except KeyboardInterrupt:

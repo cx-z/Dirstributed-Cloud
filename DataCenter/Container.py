@@ -1,6 +1,5 @@
 # -*-coding:utf-8-*-
 import os
-
 from OpenvSwitch import OpenvSwitch
 
 
@@ -13,7 +12,7 @@ def getAllEth() -> set:
 
 
 class Container:
-    def __init__(self, name, type, cpu, mem) -> None:
+    def __init__(self, name, type, cpu = "", mem ="") -> None:
         super().__init__()
         self.name: str = name
         self.type: str = type
@@ -30,32 +29,32 @@ class Container:
         OpenvSwitch().addPort("eth1", password, self.name)
         # os.system(
         #     "echo {} | sudo ovs-docker add-port ovs eth1 {}".format(password, container.name))
-        for iface in os.listdir('sys/class/net'):
+        for iface in os.listdir('/sys/class/net'):
             if iface not in ethsBefore:
+                print("eth1's vethpair is"+iface)
                 self.eth1 = iface
                 ethsBefore.add(iface)
                 break
         OpenvSwitch().addPort("eth2", password, self.name)
-        for iface in os.listdir('sys/class/net'):
+        for iface in os.listdir('/sys/class/net'):
             if iface not in ethsBefore:
+                print("eth2's vethpair is"+iface)
                 self.eth2 = iface
                 break
-        # 启动容器内引导流量的ovs交换机和对应的流表
-        self.exec("/usr/share/openvswitch/scripts/ovs-ctl start")
+        # # 启动容器内引导流量的ovs交换机和对应的流表
         # 删除容器内名为bridge的ovs交换机的默认流表项
-        self.exec("ovs-ofctl del-flows bridge")
+        os.system("docker exec -it {} /bin/bash -c \'ovs-ofctl del-flows bridge\'".format(self.name))
         # 将网卡eth1和eth2连接到bridge
-        self.exec("ovs-vsctl add-port bridge eth1")
-        self.exec("ovs-vsctl add-port bridge eth2")
+        os.system("docker exec -it {} /bin/bash -c \'ovs-vsctl add-port bridge eth1\'".format(self.name))
+        os.system("docker exec -it {} /bin/bash -c \'ovs-vsctl add-port bridge eth2\'".format(self.name))
 
         # 配置从eth1到eth2的流表项
-        self.exec(
-            "ovs-vsctl add-flow bridge priority=1,in_port=eth1,actions:output:eth2")
-
+        os.system("docker exec -it {} /bin/bash -c \'ovs-ofctl add-flow bridge priority=1,in_port=eth1,actions=output:eth2\'".format(self.name))
+        print("")
+        
     def createContainers(self):
+        print("启动容器"+self.name)
         os.system("docker run -itd --privileged=true -m={} --cpus={} --name={} {}"
                   .format(self.mem, self.cpu, self.name, self.type))
-
-    def exec(self, cmd) -> None:
-        os.system("docker exec -it {} /bin/bash -c {}".format(self.name, cmd))
+        os.system("docker exec -it {} /bin/bash -c \'/usr/share/openvswitch/scripts/ovs-ctl start\'".format(self.name))
 

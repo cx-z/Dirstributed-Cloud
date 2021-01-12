@@ -1,4 +1,5 @@
 # -*-coding:utf-8-*-
+import config
 import threading
 from SFC import SFC
 import socket
@@ -14,16 +15,14 @@ def getLocalIp():  # 获取IP地址
         return socket.inet_ntoa(fcntl.ioctl(
             s.fileno(),
             0x8915,  # SIOCGIFADDR
-            struct.pack('256s', "vmnet8".encode())  # ens3是服务器虚拟机上网的网卡名
+            struct.pack('256s', config.LOCAL_INTERFACE.encode())  # config.LOCAL_INTERFACE是服务器虚拟机上网的网卡名
         )[20:24])
 
 
 class DataCenter:
     def __init__(self) -> None:
         super().__init__()
-        self.entry: str = "ens9"
-        self.exit: str = "ens10"
-        self.reciver: Receiver = Receiver(getLocalIp(), 40001)
+        self.reciver: Receiver = Receiver()
         self.sfcs: set = set()
         self.ovs: OpenvSwitch = OpenvSwitch()
         self.lock = threading.Lock()
@@ -40,21 +39,21 @@ class DataCenter:
                 self.lock.release()
                 continue
             for msg in self.reciver.msgs:
-                #self.makeSFC(msg)
-                print(msg)
+                self.sfcs.add(self.makeSFC(msg))
+                #print(msg)
             self.lock.release()
             self.reciver.msgs.clear()
             flag = False
 
     def makeSFC(self, msg: str) -> SFC:
-        sfc = SFC()
+        cons = list()
         lines = msg.splitlines()
-        sfc.src = lines[0]
-        sfc.dst = lines[1]
-        for i in range(2,len(lines),1):
+        for i in range(3,len(lines),1):
             params = lines[i].split(',')
             con = Container(params[0], params[1], params[2], params[3])
-            sfc.containers.append(con)
+            cons.append(con)
+        sfc = SFC(lines[0],lines[1],lines[2],cons,"",config.PASSWORD)
+        sfc.createVNFs()
         return sfc
 
   

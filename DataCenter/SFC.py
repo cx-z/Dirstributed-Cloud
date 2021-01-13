@@ -13,22 +13,22 @@ class SFC:
         self.dst: str = dst
         self.offtime = offtime  # 下线时间，后面写
         self.password: str = password  # 本机的sudo密码
-        self.containers:list = containers  # 此功能链的VNF容器集合
+        self.containers: list = containers  # 此功能链的VNF容器集合
         self.interfaces: list = list()  # 此功能链的VNF接口
 
-    # def __del__(self) -> None:
-    #     # 终止并删除此SFC的所有容器
-    #     for con in self.containers:
-    #         os.system("docker stop {}".format(con.name))
-    #         os.system("docker rm {}".format(con.name))
-    #     self.containers.clear()
-    #     # 清除此SFC连接在ovs上的所有端口
-    #     # 由于config.ENTRY和config.EXIT是数据中心自带的网卡，其他SFC也要使用，不能从ovs上删除
-    #     self.interfaces.remove(config.ENTRY)
-    #     self.interfaces.remove(config.EXIT)
-    #     for item in self.interfaces:
-    #         OpenvSwitch().delPort(item,self.password)
-    #     self.interfaces.clear()
+    def __del__(self) -> None:
+        # 清除此SFC连接在ovs上的所有端口
+        # 由于config.ENTRY和config.EXIT是数据中心自带的网卡，其他SFC也要使用，不能从ovs上删除
+        self.interfaces.remove(config.ENTRY)
+        self.interfaces.remove(config.EXIT)
+        for item in self.interfaces:
+            OpenvSwitch().delPort(item, self.password)
+        self.interfaces.clear()
+        # 终止并删除此SFC的所有容器
+        for con in self.containers:
+            os.system("docker stop {}".format(con.name))
+            os.system("docker rm {}".format(con.name))
+        self.containers.clear()
 
     def createVNFs(self):
         # 根据给定的容器名、资源上限创建容器
@@ -37,6 +37,8 @@ class SFC:
             # 为VNF创建网卡eth1和eth2时，同时已经在容器内配置了流量从eth1到eth2的流表
             # 且容器内的ovs只有一条流表，这样也可以避免广播风暴
             con.addInterfaceToContainer(self.password)
+            os.system(
+                "docker -it exec {} /bin/bash -c \'ovs-ofctl dump-flows bridge\'".format(con.name))
         # 配置流表项将容器串联起来，构成功能链
         self.addFlows()
 
@@ -52,6 +54,6 @@ class SFC:
             self.interfaces.append(con.eth2)
         # 最后从数据中心的config.EXIT离开
         self.interfaces.append(config.EXIT)
-        for i in range(0,len(self.interfaces)-1,2):
+        for i in range(0, len(self.interfaces)-1, 2):
             OpenvSwitch().addFlow("ip,nw_src={},nw_dst={},priority=1,in_port={},actions=output:{}"
-                                  .format(self.src, self.dst, self.interfaces[i], self.interfaces[i+1]),self.password)
+                                  .format(self.src, self.dst, self.interfaces[i], self.interfaces[i+1]), self.password)

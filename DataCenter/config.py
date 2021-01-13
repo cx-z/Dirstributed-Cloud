@@ -1,5 +1,6 @@
 #-*-coding:utf-8-*-
 
+PASSWORD = "12345zcx"
 LOCAL_INTERFACE = "enp1s0"
 LOCAL_IP = "192.168.122.196"
 LOCAL_PORT = 40001

@@ -1,0 +1,14 @@
+#-*-coding:utf-8-*-
+
+LOCAL_INTERFACE = "virbr0"
+LOCAL_IP = "192.168.122.1"
+LOCAL_PORT = 40000
+PASSWORD = "12345zcx"
+DATABASE = "Master"
+DCTABLE = "Datacenters"
+EDGETABLE = "Edges"
+INIT_MEMORY = 2000
+INIT_CPU = 1
+INIT_INCOME = 0
+INIT_BANDWIDTH = 1000
+FLAG = False

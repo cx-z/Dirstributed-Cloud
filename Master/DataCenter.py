@@ -15,4 +15,6 @@ class DataCenter:
         self.unitMemprice:int = unitMemPrice
         self.unitCpuPrice:int = unitCpuPrice
         self.current_income = 0
+        self.neighbors = list() # 此节点的邻接节点
+        self.weight = 0
         

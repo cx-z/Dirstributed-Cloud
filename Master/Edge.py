@@ -7,9 +7,10 @@
 class Edge:
     def __init__(self, endpoint1, endpoint2, bandwidth, unitprice) -> None:
         super().__init__()
-        self.endpoint1 = endpoint1
-        self.endpoint2 = endpoint2
-        self.totalBandWidth = bandwidth
-        self.leftBandWidth = bandwidth
-        self.unitprice = unitprice
-        self.current_income = 0 # 指当前运行的服务的总收费
+        self.endpoint1:int = endpoint1
+        self.endpoint2:int = endpoint2
+        self.propagationDelay:int = 0
+        self.totalBandWidth:int = bandwidth
+        self.leftBandWidth:int = bandwidth
+        self.unitprice:int = unitprice
+        self.current_income:int = 0 # 指当前运行的服务的总收费

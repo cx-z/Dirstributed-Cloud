@@ -15,6 +15,7 @@ from VNF import VNF
 class Shop:
     def __init__(self) -> None:
         super().__init__()
+        self.profit = 0
         self.caculator = Caculator([1,2])
         self.requests:list = [] # 按照offtime比较的自排序的堆
         self.lock = threading.Lock()
@@ -66,9 +67,9 @@ class Shop:
     # 调用类Caculator的calculate_profit函数计算利润和应部署的节点
     # 此函数计算完利润后，需要修改req的属性，包括req.sfc里各个VNF的属性
     def caculate_profit(self,req:Request)->float and DataCenter:
-        # profit,node = Caculator().calculate_profit(req)
-        # return profit,node
-        return 100,DataCenter(1,"192.168.122.196",40001,400,1.5,100,100)
+        profit,node = Caculator().calculate_profit(req)
+        return profit,node
+        #return 100,DataCenter(1,"192.168.122.196",40001,400,1.5,100,100)
 
     def save_req_info(self, req:Request):
         Manager().insert_request_info(req)

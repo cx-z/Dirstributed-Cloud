@@ -11,19 +11,7 @@ from DataCenter import DataCenter
 from Edge import Edge
 from Request import Request
 from VNF import VNF
-
-
-class Singleton(type):
-    def __init__(self, *args, **kwargs):
-        self.__instance = None
-        super().__init__(*args, **kwargs)
-
-    def __call__(self, *args, **kwargs):
-        if self.__instance is None:
-            self.__instance = super().__call__(*args, **kwargs)
-            return self.__instance
-        else:
-            return self.__instance
+from Singleton import Singleton
 
 
 class Manager(metaclass = Singleton):
@@ -49,8 +37,10 @@ class Manager(metaclass = Singleton):
             .format(config.INIT_BANDWIDTH, config.INIT_INCOME)
         self.exec_sql(sql)
 
+    # 在数据库Master创建表格Requests和VNFs
     def create_table(self) -> None:
         cursor = self.db.cursor()
+        cursor.execute("USE Master")
         cursor.execute("DROP TABLE IF EXISTS Requests")
         sql = """CREATE TABLE IF NOT EXISTS Requests(
                 id INT NOT NULL,
@@ -76,7 +66,10 @@ class Manager(metaclass = Singleton):
             )"""
         cursor.execute(sql)
 
+    # 执行某条SQL语句，返回输出结果
     def exec_sql(self, sql:str) -> tuple:
+        # 本工程的信息保存在数据库Master中
+        self.db.cursor().execute("USE Master")
         try:
             self.db.cursor().execute(sql)
             results = self.db.cursor().fetchall()
@@ -86,27 +79,34 @@ class Manager(metaclass = Singleton):
             self.db.rollback()
             return ()
 
+    # 更新数据库的表DataCenters中某节点的信息
     def update_node_info(self, node: DataCenter) -> None:
-        sql = """INSERT INTO DataCenters(id, leftmem, leftcpu, current_income)
-         VALUES('{}','{}', '{}', '{}')""".format(node.id, node.leftmem, node.leftcpu, node.current_income)
+        sql = """UPDATE DataCenters SET
+            leftmem = {}, leftcpu = {} , current_income = {}
+            WHERE id = {}"""\
+            .format(node.leftmem, node.leftcpu, node.current_income, node.id)
         self.exec_sql(sql)
 
+    # 从数据库的表DataCenters中读取某节点的信息
     def load_node_info(self, node: DataCenter) -> None:
         sql = """SELECT * FROM DataCenters
             WHERE id={}""".format(node.id)
         dc: tuple = self.exec_sql(sql)
         if not dc:
             return
-        node.leftmem = dc[1]
-        node.leftcpu = dc[2]
-        node.current_income = dc[3]
+        node.leftmem = dc[3]
+        node.leftcpu = dc[4]
+        node.current_income = dc[5]
 
+    # 更新数据库的表Edges中某链接的信息
     def update_edge_info(self, edge: Edge) -> None:
-        sql = """INSERT INTO Edges(endpoint1, endpoint2, leftbandwidth, current_income)
-            VALUES('{}','{}', '{}', '{}')"""\
-            .format(edge.endpoint1, edge.endpoint2, edge.leftBandWidth, edge.current_income)
+        sql = """UPDATE Edges SET
+            leftbandwidth = {}, current_income = {}
+            WHERE endpoint1 = {} AND endpoint2 = {}"""\
+            .format(edge.leftBandWidth, edge.current_income, edge.endpoint1, edge.endpoint2)
         self.exec_sql(sql)
 
+    # 从数据库的表Edges中读取某链接的信息
     def load_edge_info(self, edge: Edge) -> None:
         sql = """SELECT * FROM Edges
             WHERE endpoint1={} and endpoint2={}"""\
@@ -114,18 +114,23 @@ class Manager(metaclass = Singleton):
         e: tuple = self.exec_sql(sql)
         if not e:
             return
-        edge.leftBandWidth = e[2]
-        edge.current_income = e[3]
+        edge.propagationDelay = e[2]
+        edge.totalBandWidth = e[3]
+        edge.leftBandWidth = e[4]
+        edge.unitprice = e[5]
+        edge.current_income = e[6]
 
+    # 向数据库的表Requests中插入新上线的请求
     def insert_request_info(self, req: Request) -> None:
         sfc:str = ""
         for v in req.sfc:
             str += v + ' '
         sql = """INSERT INTO Requests(id, source, destination, sfc, bandwidth, maxDelay, duration, bid)
-            VALUES('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')"""\
+            VALUES({}, '{}', '{}', '{}', {}, {}, {}, {})"""\
             .format(req.id, req.src, req.dst, sfc, req.bandwidth, req.maxDelay, req.duration, req.bid)
         self.exec_sql(sql)
 
+    # 从数据库的表Requests中读取某个在线的请求信息
     def load_request_info(self, req: Request) -> None:
         sql = """SELECT * FROM Requests WHERE id = {}"""\
             .format(req.id)
@@ -140,18 +145,20 @@ class Manager(metaclass = Singleton):
         req.duration = r[6]
         req.bid = r[7]
 
+    # 从数据库的表Requests中删除下线的请求
     def del_request_info(self, req: Request) -> None:
         sql = """DELETE FROM Requests WHERE id = {}"""\
             .format(req.id)
         self.exec_sql(sql)
 
+    # 将新的VNF插入数据库的表VNFs中
     def insert_vnf_info(self, vnf: VNF) -> None:
         sql = """INSERT INTO VNFs(sfc_id, type, sequence, memory, cpu, dc_id)
-            VALUES('{}', '{}', '{}', '{}', '{}', '{}')"""\
+            VALUES({}, {}, {}, {}, {}, {})"""\
             .format(vnf.sfc_id, vnf.type, vnf.sequence, vnf.memory, vnf.cpu, vnf.dc_id)
         self.exec_sql(sql)
 
-
+    # 从数据库中读取某VNF信息
     def load_vnf_info(self, vnf: VNF) -> None:
         sql = """SELECT * FROM VNFs WHERE sfc_id = {} and sequence = {}"""\
             .format(vnf.sfc_id, vnf.sequence)
@@ -163,6 +170,7 @@ class Manager(metaclass = Singleton):
         vnf.cpu = v[4]
         vnf.dc_id = v[5]
 
+    # 从数据库中删除某VNF信息
     def del_vnf_info(self, vnf: VNF) -> None:
         sql = """DELETE FROM VNFs WHERE sfc_id = {} and sequence = {}"""\
             .format(vnf.id, vnf.sequence)
